@@ -13,19 +13,32 @@ Distribution: `weaklink-modem` (PyPI + release binaries).
 
 ## Install
 
-Portable Linux binary:
+Portable Linux binary (x86_64):
 
 ```bash
-sudo apt install libportaudio2 libsndfile1
 curl -L -O https://github.com/ivica3730k/weaklink-9a3ice/releases/latest/download/weaklink-modem-linux-x86_64-latest
 chmod +x weaklink-modem-linux-x86_64-latest
 ```
 
-Debian / Ubuntu `.deb`:
+Portable Linux binary (arm64 / Raspberry Pi):
+
+```bash
+curl -L -O https://github.com/ivica3730k/weaklink-9a3ice/releases/latest/download/weaklink-modem-linux-arm64-latest
+chmod +x weaklink-modem-linux-arm64-latest
+```
+
+Debian / Ubuntu `.deb` (amd64):
 
 ```bash
 curl -L -O https://github.com/ivica3730k/weaklink-9a3ice/releases/latest/download/weaklink-modem_amd64-latest.deb
 sudo dpkg -i weaklink-modem_amd64-latest.deb
+```
+
+Debian / Raspberry Pi OS `.deb` (arm64):
+
+```bash
+curl -L -O https://github.com/ivica3730k/weaklink-9a3ice/releases/latest/download/weaklink-modem_arm64-latest.deb
+sudo dpkg -i weaklink-modem_arm64-latest.deb
 ```
 
 From source:
