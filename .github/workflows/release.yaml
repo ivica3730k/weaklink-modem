@@ -38,7 +38,7 @@ jobs:
             dist/*.tar.gz
 
   build-binary:
-    name: Build portable Linux binary
+    name: Build portable Linux binary (universal)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -47,12 +47,13 @@ jobs:
         id: ver
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Build fully static binary inside Debian 12 (glibc 2.36 compatible)
+      - name: Build fully static binary inside Ubuntu 22.04 (glibc 2.35 baseline)
         run: |
           docker run --rm \
             -v "$PWD:/work" -w /work \
             -e VERSION="${{ steps.ver.outputs.version }}" \
-            debian:bookworm-slim bash -ex -c '
+            ubuntu:22.04 bash -ex -c '
+              export DEBIAN_FRONTEND=noninteractive
               apt-get update -q
               apt-get install -y --no-install-recommends \
                 python3 python3-pip python3-venv python3-dev \
@@ -75,10 +76,13 @@ jobs:
               chmod -R 755 dist/ build/ 2>/dev/null || true
             '
 
-      - name: Smoke-test binary in Debian 12 environment
+      - name: Smoke-test binary across popular Linux distributions
         run: |
-          docker run --rm -v "$PWD/dist:/dist:ro" debian:bookworm-slim \
-            /dist/weaklink-modem --help
+          for image in ubuntu:22.04 ubuntu:24.04 debian:bookworm-slim; do
+            echo "=== Testing on $image ==="
+            docker run --rm -v "$PWD/dist:/dist:ro" "$image" /dist/weaklink-modem --help
+            echo "=== PASSED: $image ==="
+          done
 
       - name: Create versioned and latest aliases
         run: |
@@ -93,7 +97,7 @@ jobs:
             dist/weaklink-modem-linux-x86_64-latest
 
   build-binary-arm64:
-    name: Build portable Linux binary (arm64)
+    name: Build portable Linux binary (arm64, universal)
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
@@ -102,12 +106,13 @@ jobs:
         id: ver
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Build fully static binary inside Debian 12 (glibc 2.36 compatible)
+      - name: Build fully static binary inside Ubuntu 22.04 (glibc 2.35 baseline)
         run: |
           docker run --rm \
             -v "$PWD:/work" -w /work \
             -e VERSION="${{ steps.ver.outputs.version }}" \
-            debian:bookworm-slim bash -ex -c '
+            ubuntu:22.04 bash -ex -c '
+              export DEBIAN_FRONTEND=noninteractive
               apt-get update -q
               apt-get install -y --no-install-recommends \
                 python3 python3-pip python3-venv python3-dev \
@@ -130,10 +135,13 @@ jobs:
               chmod -R 755 dist/ build/ 2>/dev/null || true
             '
 
-      - name: Smoke-test binary in Debian 12 environment
+      - name: Smoke-test binary across popular Linux distributions
         run: |
-          docker run --rm -v "$PWD/dist:/dist:ro" debian:bookworm-slim \
-            /dist/weaklink-modem --help
+          for image in ubuntu:22.04 ubuntu:24.04 debian:bookworm-slim; do
+            echo "=== Testing on $image ==="
+            docker run --rm -v "$PWD/dist:/dist:ro" "$image" /dist/weaklink-modem --help
+            echo "=== PASSED: $image ==="
+          done
 
       - name: Create versioned and latest aliases
         run: |
@@ -148,7 +156,7 @@ jobs:
             dist/weaklink-modem-linux-arm64-latest
 
   build-deb:
-    name: Build amd64 .deb (Debian 12 / Ubuntu compatible)
+    name: Build amd64 .deb (universal)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -163,12 +171,13 @@ jobs:
         id: ver
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Build fully static binary inside Debian 12 (glibc 2.36 compatible)
+      - name: Build fully static binary inside Ubuntu 22.04 (glibc 2.35 baseline)
         run: |
           docker run --rm \
             -v "$PWD:/work" -w /work \
             -e VERSION="${{ steps.ver.outputs.version }}" \
-            debian:bookworm-slim bash -ex -c '
+            ubuntu:22.04 bash -ex -c '
+              export DEBIAN_FRONTEND=noninteractive
               apt-get update -q
               apt-get install -y --no-install-recommends \
                 python3 python3-pip python3-venv python3-dev \
@@ -191,10 +200,13 @@ jobs:
               chmod -R 755 dist/ build/ 2>/dev/null || true
             '
 
-      - name: Smoke-test binary in Debian 12 environment
+      - name: Smoke-test binary across popular Linux distributions
         run: |
-          docker run --rm -v "$PWD/dist:/dist:ro" debian:bookworm-slim \
-            /dist/weaklink-modem --help
+          for image in ubuntu:22.04 ubuntu:24.04 debian:bookworm-slim; do
+            echo "=== Testing on $image ==="
+            docker run --rm -v "$PWD/dist:/dist:ro" "$image" /dist/weaklink-modem --help
+            echo "=== PASSED: $image ==="
+          done
 
       - name: Stage files for packaging
         run: |
@@ -223,7 +235,7 @@ jobs:
             weaklink-modem_amd64-latest.deb
 
   build-deb-arm64:
-    name: Build arm64 .deb (Raspberry Pi OS / Debian 12 compatible)
+    name: Build arm64 .deb (universal)
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
@@ -238,12 +250,13 @@ jobs:
         id: ver
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Build fully static binary inside Debian 12 (glibc 2.36 compatible)
+      - name: Build fully static binary inside Ubuntu 22.04 (glibc 2.35 baseline)
         run: |
           docker run --rm \
             -v "$PWD:/work" -w /work \
             -e VERSION="${{ steps.ver.outputs.version }}" \
-            debian:bookworm-slim bash -ex -c '
+            ubuntu:22.04 bash -ex -c '
+              export DEBIAN_FRONTEND=noninteractive
               apt-get update -q
               apt-get install -y --no-install-recommends \
                 python3 python3-pip python3-venv python3-dev \
@@ -266,10 +279,13 @@ jobs:
               chmod -R 755 dist/ build/ 2>/dev/null || true
             '
 
-      - name: Smoke-test binary in Debian 12 environment
+      - name: Smoke-test binary across popular Linux distributions
         run: |
-          docker run --rm -v "$PWD/dist:/dist:ro" debian:bookworm-slim \
-            /dist/weaklink-modem --help
+          for image in ubuntu:22.04 ubuntu:24.04 debian:bookworm-slim; do
+            echo "=== Testing on $image ==="
+            docker run --rm -v "$PWD/dist:/dist:ro" "$image" /dist/weaklink-modem --help
+            echo "=== PASSED: $image ==="
+          done
 
       - name: Stage files for packaging
         run: |
