@@ -24,14 +24,11 @@ jobs:
         with:
           poetry-version: "1.8.5"
 
-      - name: Set version from tag
-        run: poetry version "${GITHUB_REF_NAME#v}"
-
-      - name: Generate PyPI README with tag-locked permalinks
-        run: python scripts/build_pypi_readme.py "${GITHUB_REF_NAME}"
-
-      - name: Build sdist + wheel
-        run: poetry build
+      - name: Set release version and build
+        run: |
+          poetry version "${GITHUB_REF_NAME#v}"
+          python scripts/build_pypi_readme.py "${GITHUB_REF_NAME}"
+          poetry build
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

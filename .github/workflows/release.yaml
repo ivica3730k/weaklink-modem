@@ -43,37 +43,27 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Resolve version
-        id: ver
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
-      - name: Build fully static binary inside Ubuntu 22.04 (glibc 2.35 baseline)
+      - name: Build standalone onefile binary inside Ubuntu 22.04 baseline
         run: |
           docker run --rm \
             -v "$PWD:/work" -w /work \
-            -e VERSION="${{ steps.ver.outputs.version }}" \
+            -e VERSION="${GITHUB_REF_NAME#v}" \
             ubuntu:22.04 bash -ex -c '
               export DEBIAN_FRONTEND=noninteractive
               apt-get update -q
               apt-get install -y --no-install-recommends \
-                python3 python3-pip python3-venv python3-dev \
-                build-essential patchelf libportaudio2 libsndfile1 \
-                scons musl-tools
+                python3 python3-pip python3-venv \
+                libportaudio2 libsndfile1
               sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
               python3 -m venv /opt/venv
               /opt/venv/bin/pip install --upgrade pip
-              /opt/venv/bin/pip install . pyinstaller staticx
-              find /opt/venv/lib \( -name "*.so" -o -name "*.so.*" \) \
-                ! -path "*/site-packages/numpy/*" \
-                -exec patchelf --remove-rpath {} +
+              /opt/venv/bin/pip install . pyinstaller
               /opt/venv/bin/pyinstaller \
                 --onefile --name weaklink-modem \
                 --collect-submodules weaklink \
                 --collect-all sounddevice \
                 --collect-all soundfile \
                 src/weaklink/modem/cli.py
-              /opt/venv/bin/staticx dist/weaklink-modem dist/weaklink-modem-static
-              mv dist/weaklink-modem-static dist/weaklink-modem
               chmod -R 755 dist/ build/ 2>/dev/null || true
             '
 
@@ -87,15 +77,14 @@ jobs:
 
       - name: Create versioned and latest aliases
         run: |
-          cp dist/weaklink-modem dist/weaklink-modem-linux-x86_64-${{ steps.ver.outputs.version }}
+          cp dist/weaklink-modem dist/weaklink-modem-linux-x86_64-${GITHUB_REF_NAME#v}
           cp dist/weaklink-modem dist/weaklink-modem-linux-x86_64-latest
 
       - name: Upload to release
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            dist/weaklink-modem-linux-x86_64-${{ steps.ver.outputs.version }}
-            dist/weaklink-modem-linux-x86_64-latest
+            dist/weaklink-modem-linux-x86_64-*
 
   build-binary-arm64:
     name: Build portable Linux binary (arm64, universal)
@@ -103,37 +92,27 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Resolve version
-        id: ver
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
-      - name: Build fully static binary inside Ubuntu 22.04 (glibc 2.35 baseline)
+      - name: Build standalone onefile binary inside Ubuntu 22.04 baseline
         run: |
           docker run --rm \
             -v "$PWD:/work" -w /work \
-            -e VERSION="${{ steps.ver.outputs.version }}" \
+            -e VERSION="${GITHUB_REF_NAME#v}" \
             ubuntu:22.04 bash -ex -c '
               export DEBIAN_FRONTEND=noninteractive
               apt-get update -q
               apt-get install -y --no-install-recommends \
-                python3 python3-pip python3-venv python3-dev \
-                build-essential patchelf libportaudio2 libsndfile1 \
-                scons musl-tools
+                python3 python3-pip python3-venv \
+                libportaudio2 libsndfile1
               sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
               python3 -m venv /opt/venv
               /opt/venv/bin/pip install --upgrade pip
-              /opt/venv/bin/pip install . pyinstaller staticx
-              find /opt/venv/lib \( -name "*.so" -o -name "*.so.*" \) \
-                ! -path "*/site-packages/numpy/*" \
-                -exec patchelf --remove-rpath {} +
+              /opt/venv/bin/pip install . pyinstaller
               /opt/venv/bin/pyinstaller \
                 --onefile --name weaklink-modem \
                 --collect-submodules weaklink \
                 --collect-all sounddevice \
                 --collect-all soundfile \
                 src/weaklink/modem/cli.py
-              /opt/venv/bin/staticx dist/weaklink-modem dist/weaklink-modem-static
-              mv dist/weaklink-modem-static dist/weaklink-modem
               chmod -R 755 dist/ build/ 2>/dev/null || true
             '
 
@@ -147,15 +126,14 @@ jobs:
 
       - name: Create versioned and latest aliases
         run: |
-          cp dist/weaklink-modem dist/weaklink-modem-linux-arm64-${{ steps.ver.outputs.version }}
+          cp dist/weaklink-modem dist/weaklink-modem-linux-arm64-${GITHUB_REF_NAME#v}
           cp dist/weaklink-modem dist/weaklink-modem-linux-arm64-latest
 
       - name: Upload to release
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            dist/weaklink-modem-linux-arm64-${{ steps.ver.outputs.version }}
-            dist/weaklink-modem-linux-arm64-latest
+            dist/weaklink-modem-linux-arm64-*
 
   build-deb:
     name: Build amd64 .deb (universal)
@@ -169,37 +147,27 @@ jobs:
           sudo apt-get install -y ruby ruby-dev rubygems build-essential
           sudo gem install --no-document fpm
 
-      - name: Resolve version
-        id: ver
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
-      - name: Build fully static binary inside Ubuntu 22.04 (glibc 2.35 baseline)
+      - name: Build standalone onefile binary inside Ubuntu 22.04 baseline
         run: |
           docker run --rm \
             -v "$PWD:/work" -w /work \
-            -e VERSION="${{ steps.ver.outputs.version }}" \
+            -e VERSION="${GITHUB_REF_NAME#v}" \
             ubuntu:22.04 bash -ex -c '
               export DEBIAN_FRONTEND=noninteractive
               apt-get update -q
               apt-get install -y --no-install-recommends \
-                python3 python3-pip python3-venv python3-dev \
-                build-essential patchelf libportaudio2 libsndfile1 \
-                scons musl-tools
+                python3 python3-pip python3-venv \
+                libportaudio2 libsndfile1
               sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
               python3 -m venv /opt/venv
               /opt/venv/bin/pip install --upgrade pip
-              /opt/venv/bin/pip install . pyinstaller staticx
-              find /opt/venv/lib \( -name "*.so" -o -name "*.so.*" \) \
-                ! -path "*/site-packages/numpy/*" \
-                -exec patchelf --remove-rpath {} +
+              /opt/venv/bin/pip install . pyinstaller
               /opt/venv/bin/pyinstaller \
                 --onefile --name weaklink-modem \
                 --collect-submodules weaklink \
                 --collect-all sounddevice \
                 --collect-all soundfile \
                 src/weaklink/modem/cli.py
-              /opt/venv/bin/staticx dist/weaklink-modem dist/weaklink-modem-static
-              mv dist/weaklink-modem-static dist/weaklink-modem
               chmod -R 755 dist/ build/ 2>/dev/null || true
             '
 
@@ -220,7 +188,7 @@ jobs:
         run: |
           fpm -s dir -t deb \
             -n weaklink-modem \
-            -v "${{ steps.ver.outputs.version }}" \
+            -v "${GITHUB_REF_NAME#v}" \
             --description "Streaming MFSK digital modem: bytes-to-audio-and-back byte pipe." \
             --maintainer "Ivica <ivica.matic@groupnexus.co.uk>" \
             --architecture amd64 \
@@ -228,13 +196,13 @@ jobs:
             usr
 
       - name: Alias .deb with -latest suffix
-        run: cp weaklink-modem_${{ steps.ver.outputs.version }}_amd64.deb weaklink-modem_amd64-latest.deb
+        run: cp weaklink-modem_${GITHUB_REF_NAME#v}_amd64.deb weaklink-modem_amd64-latest.deb
 
       - name: Upload to release
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            weaklink-modem_${{ steps.ver.outputs.version }}_amd64.deb
+            weaklink-modem_*_amd64.deb
             weaklink-modem_amd64-latest.deb
 
   build-deb-arm64:
@@ -249,37 +217,27 @@ jobs:
           sudo apt-get install -y ruby ruby-dev rubygems build-essential
           sudo gem install --no-document fpm
 
-      - name: Resolve version
-        id: ver
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
-      - name: Build fully static binary inside Ubuntu 22.04 (glibc 2.35 baseline)
+      - name: Build standalone onefile binary inside Ubuntu 22.04 baseline
         run: |
           docker run --rm \
             -v "$PWD:/work" -w /work \
-            -e VERSION="${{ steps.ver.outputs.version }}" \
+            -e VERSION="${GITHUB_REF_NAME#v}" \
             ubuntu:22.04 bash -ex -c '
               export DEBIAN_FRONTEND=noninteractive
               apt-get update -q
               apt-get install -y --no-install-recommends \
-                python3 python3-pip python3-venv python3-dev \
-                build-essential patchelf libportaudio2 libsndfile1 \
-                scons musl-tools
+                python3 python3-pip python3-venv \
+                libportaudio2 libsndfile1
               sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
               python3 -m venv /opt/venv
               /opt/venv/bin/pip install --upgrade pip
-              /opt/venv/bin/pip install . pyinstaller staticx
-              find /opt/venv/lib \( -name "*.so" -o -name "*.so.*" \) \
-                ! -path "*/site-packages/numpy/*" \
-                -exec patchelf --remove-rpath {} +
+              /opt/venv/bin/pip install . pyinstaller
               /opt/venv/bin/pyinstaller \
                 --onefile --name weaklink-modem \
                 --collect-submodules weaklink \
                 --collect-all sounddevice \
                 --collect-all soundfile \
                 src/weaklink/modem/cli.py
-              /opt/venv/bin/staticx dist/weaklink-modem dist/weaklink-modem-static
-              mv dist/weaklink-modem-static dist/weaklink-modem
               chmod -R 755 dist/ build/ 2>/dev/null || true
             '
 
@@ -300,7 +258,7 @@ jobs:
         run: |
           fpm -s dir -t deb \
             -n weaklink-modem \
-            -v "${{ steps.ver.outputs.version }}" \
+            -v "${GITHUB_REF_NAME#v}" \
             --description "Streaming MFSK digital modem: bytes-to-audio-and-back byte pipe." \
             --maintainer "Ivica <ivica.matic@groupnexus.co.uk>" \
             --architecture arm64 \
@@ -308,11 +266,11 @@ jobs:
             usr
 
       - name: Alias .deb with -latest suffix
-        run: cp weaklink-modem_${{ steps.ver.outputs.version }}_arm64.deb weaklink-modem_arm64-latest.deb
+        run: cp weaklink-modem_${GITHUB_REF_NAME#v}_arm64.deb weaklink-modem_arm64-latest.deb
 
       - name: Upload to release
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            weaklink-modem_${{ steps.ver.outputs.version }}_arm64.deb
+            weaklink-modem_*_arm64.deb
             weaklink-modem_arm64-latest.deb
