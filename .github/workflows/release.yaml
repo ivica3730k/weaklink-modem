@@ -64,6 +64,7 @@ jobs:
               /opt/venv/bin/pip install --upgrade pip
               /opt/venv/bin/pip install . pyinstaller staticx
               find /opt/venv/lib \( -name "*.so" -o -name "*.so.*" \) \
+                ! -path "*/site-packages/numpy/*" \
                 -exec patchelf --remove-rpath {} +
               /opt/venv/bin/pyinstaller \
                 --onefile --name weaklink-modem \
@@ -123,6 +124,7 @@ jobs:
               /opt/venv/bin/pip install --upgrade pip
               /opt/venv/bin/pip install . pyinstaller staticx
               find /opt/venv/lib \( -name "*.so" -o -name "*.so.*" \) \
+                ! -path "*/site-packages/numpy/*" \
                 -exec patchelf --remove-rpath {} +
               /opt/venv/bin/pyinstaller \
                 --onefile --name weaklink-modem \
@@ -188,6 +190,7 @@ jobs:
               /opt/venv/bin/pip install --upgrade pip
               /opt/venv/bin/pip install . pyinstaller staticx
               find /opt/venv/lib \( -name "*.so" -o -name "*.so.*" \) \
+                ! -path "*/site-packages/numpy/*" \
                 -exec patchelf --remove-rpath {} +
               /opt/venv/bin/pyinstaller \
                 --onefile --name weaklink-modem \
@@ -267,6 +270,7 @@ jobs:
               /opt/venv/bin/pip install --upgrade pip
               /opt/venv/bin/pip install . pyinstaller staticx
               find /opt/venv/lib \( -name "*.so" -o -name "*.so.*" \) \
+                ! -path "*/site-packages/numpy/*" \
                 -exec patchelf --remove-rpath {} +
               /opt/venv/bin/pyinstaller \
                 --onefile --name weaklink-modem \
