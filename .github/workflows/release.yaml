@@ -38,59 +38,56 @@ jobs:
             dist/*.tar.gz
 
   build-binary:
-    name: Build portable Linux binary
+    name: Build portable Linux binary (universal)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-
-      - name: Set up Python
-        id: setup-python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-
-      - name: Install Poetry
-        uses: abatilo/actions-poetry@v4
-        with:
-          poetry-version: "1.8.5"
-
-      - name: Install build prerequisites
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y patchelf libportaudio2 libsndfile1 scons musl-tools
 
       - name: Resolve version
         id: ver
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Set version from tag
-        run: poetry version "${{ steps.ver.outputs.version }}"
-
-      - name: Install project and build tools
+      - name: Build fully static binary inside Ubuntu 22.04 (glibc 2.35 baseline)
         run: |
-          python -m pip install --upgrade pip
-          pip install .
-          pip install pyinstaller staticx
+          docker run --rm \
+            -v "$PWD:/work" -w /work \
+            -e VERSION="${{ steps.ver.outputs.version }}" \
+            ubuntu:22.04 bash -ex -c '
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update -q
+              apt-get install -y --no-install-recommends \
+                python3 python3-pip python3-venv python3-dev \
+                build-essential patchelf libportaudio2 libsndfile1 \
+                scons musl-tools
+              sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+              python3 -m venv /opt/venv
+              /opt/venv/bin/pip install --upgrade pip
+              /opt/venv/bin/pip install . pyinstaller staticx
+              find /opt/venv/lib \( -name "*.so" -o -name "*.so.*" \) \
+                -exec patchelf --remove-rpath {} +
+              /opt/venv/bin/pyinstaller \
+                --onefile --name weaklink-modem \
+                --collect-submodules weaklink \
+                --collect-all sounddevice \
+                --collect-all soundfile \
+                src/weaklink/modem/cli.py
+              /opt/venv/bin/staticx dist/weaklink-modem dist/weaklink-modem-static
+              mv dist/weaklink-modem-static dist/weaklink-modem
+              chmod -R 755 dist/ build/ 2>/dev/null || true
+            '
 
-      - name: Strip RUNPATH from Python libs (staticx compatibility)
+      - name: Smoke-test binary across popular Linux distributions
         run: |
-          find "$pythonLocation/lib" \( -name '*.so' -o -name '*.so.*' \) \
-            -exec patchelf --remove-rpath {} +
+          for image in ubuntu:22.04 ubuntu:24.04 debian:bookworm-slim; do
+            echo "=== Testing on $image ==="
+            docker run --rm -v "$PWD/dist:/dist:ro" "$image" /dist/weaklink-modem --help
+            echo "=== PASSED: $image ==="
+          done
 
-      - name: Build PyInstaller binary
+      - name: Create versioned and latest aliases
         run: |
-          pyinstaller \
-            --onefile \
-            --name weaklink-modem \
-            --collect-submodules weaklink \
-            --collect-all sounddevice \
-            --collect-all soundfile \
-            src/weaklink/modem/cli.py
-
-      - name: Make static binary (versioned + -latest aliases)
-        run: |
-          staticx dist/weaklink-modem dist/weaklink-modem-linux-x86_64-${{ steps.ver.outputs.version }}
-          cp dist/weaklink-modem-linux-x86_64-${{ steps.ver.outputs.version }} dist/weaklink-modem-linux-x86_64-latest
+          cp dist/weaklink-modem dist/weaklink-modem-linux-x86_64-${{ steps.ver.outputs.version }}
+          cp dist/weaklink-modem dist/weaklink-modem-linux-x86_64-latest
 
       - name: Upload to release
         uses: softprops/action-gh-release@v3
@@ -100,59 +97,56 @@ jobs:
             dist/weaklink-modem-linux-x86_64-latest
 
   build-binary-arm64:
-    name: Build portable Linux binary (arm64)
+    name: Build portable Linux binary (arm64, universal)
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
-
-      - name: Set up Python
-        id: setup-python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-
-      - name: Install Poetry
-        uses: abatilo/actions-poetry@v4
-        with:
-          poetry-version: "1.8.5"
-
-      - name: Install build prerequisites
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y patchelf libportaudio2 libsndfile1 scons musl-tools
 
       - name: Resolve version
         id: ver
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Set version from tag
-        run: poetry version "${{ steps.ver.outputs.version }}"
-
-      - name: Install project and build tools
+      - name: Build fully static binary inside Ubuntu 22.04 (glibc 2.35 baseline)
         run: |
-          python -m pip install --upgrade pip
-          pip install .
-          pip install pyinstaller staticx
+          docker run --rm \
+            -v "$PWD:/work" -w /work \
+            -e VERSION="${{ steps.ver.outputs.version }}" \
+            ubuntu:22.04 bash -ex -c '
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update -q
+              apt-get install -y --no-install-recommends \
+                python3 python3-pip python3-venv python3-dev \
+                build-essential patchelf libportaudio2 libsndfile1 \
+                scons musl-tools
+              sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+              python3 -m venv /opt/venv
+              /opt/venv/bin/pip install --upgrade pip
+              /opt/venv/bin/pip install . pyinstaller staticx
+              find /opt/venv/lib \( -name "*.so" -o -name "*.so.*" \) \
+                -exec patchelf --remove-rpath {} +
+              /opt/venv/bin/pyinstaller \
+                --onefile --name weaklink-modem \
+                --collect-submodules weaklink \
+                --collect-all sounddevice \
+                --collect-all soundfile \
+                src/weaklink/modem/cli.py
+              /opt/venv/bin/staticx dist/weaklink-modem dist/weaklink-modem-static
+              mv dist/weaklink-modem-static dist/weaklink-modem
+              chmod -R 755 dist/ build/ 2>/dev/null || true
+            '
 
-      - name: Strip RUNPATH from Python libs (staticx compatibility)
+      - name: Smoke-test binary across popular Linux distributions
         run: |
-          find "$pythonLocation/lib" \( -name '*.so' -o -name '*.so.*' \) \
-            -exec patchelf --remove-rpath {} +
+          for image in ubuntu:22.04 ubuntu:24.04 debian:bookworm-slim; do
+            echo "=== Testing on $image ==="
+            docker run --rm -v "$PWD/dist:/dist:ro" "$image" /dist/weaklink-modem --help
+            echo "=== PASSED: $image ==="
+          done
 
-      - name: Build PyInstaller binary
+      - name: Create versioned and latest aliases
         run: |
-          pyinstaller \
-            --onefile \
-            --name weaklink-modem \
-            --collect-submodules weaklink \
-            --collect-all sounddevice \
-            --collect-all soundfile \
-            src/weaklink/modem/cli.py
-
-      - name: Make static binary (versioned + -latest aliases)
-        run: |
-          staticx dist/weaklink-modem dist/weaklink-modem-linux-arm64-${{ steps.ver.outputs.version }}
-          cp dist/weaklink-modem-linux-arm64-${{ steps.ver.outputs.version }} dist/weaklink-modem-linux-arm64-latest
+          cp dist/weaklink-modem dist/weaklink-modem-linux-arm64-${{ steps.ver.outputs.version }}
+          cp dist/weaklink-modem dist/weaklink-modem-linux-arm64-latest
 
       - name: Upload to release
         uses: softprops/action-gh-release@v3
@@ -162,60 +156,57 @@ jobs:
             dist/weaklink-modem-linux-arm64-latest
 
   build-deb:
-    name: Build Ubuntu .deb
+    name: Build amd64 .deb (universal)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set up Python
-        id: setup-python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-
-      - name: Install Poetry
-        uses: abatilo/actions-poetry@v4
-        with:
-          poetry-version: "1.8.5"
-
-      - name: Install build prerequisites
+      - name: Install fpm
         run: |
           sudo apt-get update
-          sudo apt-get install -y ruby ruby-dev rubygems build-essential libportaudio2 libsndfile1 patchelf scons musl-tools
+          sudo apt-get install -y ruby ruby-dev rubygems build-essential
           sudo gem install --no-document fpm
 
       - name: Resolve version
         id: ver
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Set version from tag
-        run: poetry version "${{ steps.ver.outputs.version }}"
-
-      - name: Install project and PyInstaller
+      - name: Build fully static binary inside Ubuntu 22.04 (glibc 2.35 baseline)
         run: |
-          python -m pip install --upgrade pip
-          pip install .
-          pip install pyinstaller staticx
+          docker run --rm \
+            -v "$PWD:/work" -w /work \
+            -e VERSION="${{ steps.ver.outputs.version }}" \
+            ubuntu:22.04 bash -ex -c '
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update -q
+              apt-get install -y --no-install-recommends \
+                python3 python3-pip python3-venv python3-dev \
+                build-essential patchelf libportaudio2 libsndfile1 \
+                scons musl-tools
+              sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+              python3 -m venv /opt/venv
+              /opt/venv/bin/pip install --upgrade pip
+              /opt/venv/bin/pip install . pyinstaller staticx
+              find /opt/venv/lib \( -name "*.so" -o -name "*.so.*" \) \
+                -exec patchelf --remove-rpath {} +
+              /opt/venv/bin/pyinstaller \
+                --onefile --name weaklink-modem \
+                --collect-submodules weaklink \
+                --collect-all sounddevice \
+                --collect-all soundfile \
+                src/weaklink/modem/cli.py
+              /opt/venv/bin/staticx dist/weaklink-modem dist/weaklink-modem-static
+              mv dist/weaklink-modem-static dist/weaklink-modem
+              chmod -R 755 dist/ build/ 2>/dev/null || true
+            '
 
-      - name: Strip RUNPATH from Python libs (staticx compatibility)
+      - name: Smoke-test binary across popular Linux distributions
         run: |
-          find "$pythonLocation/lib" \( -name '*.so' -o -name '*.so.*' \) \
-            -exec patchelf --remove-rpath {} +
-
-      - name: Build Linux binary
-        run: |
-          pyinstaller \
-            --onefile \
-            --name weaklink-modem \
-            --collect-submodules weaklink \
-            --collect-all sounddevice \
-            --collect-all soundfile \
-            src/weaklink/modem/cli.py
-
-      - name: Make fully static binary
-        run: |
-          staticx dist/weaklink-modem dist/weaklink-modem-static
-          mv dist/weaklink-modem-static dist/weaklink-modem
+          for image in ubuntu:22.04 ubuntu:24.04 debian:bookworm-slim; do
+            echo "=== Testing on $image ==="
+            docker run --rm -v "$PWD/dist:/dist:ro" "$image" /dist/weaklink-modem --help
+            echo "=== PASSED: $image ==="
+          done
 
       - name: Stage files for packaging
         run: |
@@ -244,60 +235,57 @@ jobs:
             weaklink-modem_amd64-latest.deb
 
   build-deb-arm64:
-    name: Build arm64 .deb (Raspberry Pi OS 64-bit)
+    name: Build arm64 .deb (universal)
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set up Python
-        id: setup-python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-
-      - name: Install Poetry
-        uses: abatilo/actions-poetry@v4
-        with:
-          poetry-version: "1.8.5"
-
-      - name: Install build prerequisites
+      - name: Install fpm
         run: |
           sudo apt-get update
-          sudo apt-get install -y ruby ruby-dev rubygems build-essential libportaudio2 libsndfile1 patchelf scons musl-tools
+          sudo apt-get install -y ruby ruby-dev rubygems build-essential
           sudo gem install --no-document fpm
 
       - name: Resolve version
         id: ver
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Set version from tag
-        run: poetry version "${{ steps.ver.outputs.version }}"
-
-      - name: Install project and PyInstaller
+      - name: Build fully static binary inside Ubuntu 22.04 (glibc 2.35 baseline)
         run: |
-          python -m pip install --upgrade pip
-          pip install .
-          pip install pyinstaller staticx
+          docker run --rm \
+            -v "$PWD:/work" -w /work \
+            -e VERSION="${{ steps.ver.outputs.version }}" \
+            ubuntu:22.04 bash -ex -c '
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update -q
+              apt-get install -y --no-install-recommends \
+                python3 python3-pip python3-venv python3-dev \
+                build-essential patchelf libportaudio2 libsndfile1 \
+                scons musl-tools
+              sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+              python3 -m venv /opt/venv
+              /opt/venv/bin/pip install --upgrade pip
+              /opt/venv/bin/pip install . pyinstaller staticx
+              find /opt/venv/lib \( -name "*.so" -o -name "*.so.*" \) \
+                -exec patchelf --remove-rpath {} +
+              /opt/venv/bin/pyinstaller \
+                --onefile --name weaklink-modem \
+                --collect-submodules weaklink \
+                --collect-all sounddevice \
+                --collect-all soundfile \
+                src/weaklink/modem/cli.py
+              /opt/venv/bin/staticx dist/weaklink-modem dist/weaklink-modem-static
+              mv dist/weaklink-modem-static dist/weaklink-modem
+              chmod -R 755 dist/ build/ 2>/dev/null || true
+            '
 
-      - name: Strip RUNPATH from Python libs (staticx compatibility)
+      - name: Smoke-test binary across popular Linux distributions
         run: |
-          find "$pythonLocation/lib" \( -name '*.so' -o -name '*.so.*' \) \
-            -exec patchelf --remove-rpath {} +
-
-      - name: Build Linux binary
-        run: |
-          pyinstaller \
-            --onefile \
-            --name weaklink-modem \
-            --collect-submodules weaklink \
-            --collect-all sounddevice \
-            --collect-all soundfile \
-            src/weaklink/modem/cli.py
-
-      - name: Make fully static binary
-        run: |
-          staticx dist/weaklink-modem dist/weaklink-modem-static
-          mv dist/weaklink-modem-static dist/weaklink-modem
+          for image in ubuntu:22.04 ubuntu:24.04 debian:bookworm-slim; do
+            echo "=== Testing on $image ==="
+            docker run --rm -v "$PWD/dist:/dist:ro" "$image" /dist/weaklink-modem --help
+            echo "=== PASSED: $image ==="
+          done
 
       - name: Stage files for packaging
         run: |
