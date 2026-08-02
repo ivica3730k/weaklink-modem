@@ -26,7 +26,7 @@ jobs:
           sudo apt-get install -y libsndfile1 libportaudio2
           python -m pip install --upgrade pip poetry
           poetry config virtualenvs.create false
-          poetry install --no-interaction --no-root
+          poetry install --no-interaction
 
       - name: Run tests (unit + slow SNR sweeps)
         run: poetry run pytest -q -m "slow or not slow" -s
